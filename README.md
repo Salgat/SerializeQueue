@@ -17,7 +17,7 @@ SerializeQueue supports the following data types,
   * std::queue<T>
   * std::stack<T>
 
-There are a few caveats to using this library. SerializeQueue is cross compatible between 32 and 64 bit (a serialized value will work on either architecture), however values larger than 2^32-1 used on a 32-bit platform should stick to uint64_t types. Additionally, data is serialized assuming little-endianness. Finally, std::tuple<T> has limited support (only basic data types). Hopefully once I get a better handle on template metaprogramming, I can fix this.
+There are a few caveats to using this library. SerializeQueue is cross compatible between 32 and 64 bit (a serialized value will work on either architecture); however, values larger than 2^32-1 used on a 32-bit platform should stick to uint64_t types. Additionally, data is serialized assuming little-endianness. Finally, std::tuple<T> has limited support (only basic data types). Hopefully once I get a better handle on template metaprogramming, I can fix this.
 
 Example
 -----------------
@@ -101,7 +101,9 @@ Game Version: 1.2
 
 Todo
 -----------------
+* Add support for more STL containers
 * Expand std::tuple<T...> support
 * Setup tests (TDD)
 * Optimize (move semantics, etc)
 * Add exception support
+* Perhaps create a way for people to overload their own object types easily?
