@@ -15,8 +15,8 @@
 //=====================================================================================================================================
 
 #pragma once
-#ifndef __SERIALIZE_QUEUE__
-#define __SERIALIZE_QUEUE__
+#ifndef SERIALIZE_QUEUE_H
+#define SERIALIZE_QUEUE_H
 
 #include <vector>
 #include <stack>
@@ -64,13 +64,13 @@ namespace serq {
 		/**
 		 * Adds the char blob to the serialized_blob.
 		 */
-		inline void PushBlob(std::vector<unsigned char> const& char_blob) {
+		void PushBlob(std::vector<unsigned char> const& char_blob) {
 			for (unsigned char const character : char_blob) {
 				serialized_blob.push_back(character);
 			}
 		}
 		
-		inline void PushBlob(std::vector<unsigned char> const& char_blob, int offset) {
+		void PushBlob(std::vector<unsigned char> const& char_blob, int offset) {
 			//for (unsigned char const character : char_blob) {
 			for (int index = offset; index < char_blob.size(); ++index) {
 				serialized_blob.push_back(char_blob[index]);
@@ -80,7 +80,7 @@ namespace serq {
 		/**
 		 * Pushes data directly to serialized_data.
 		 */
-		inline void PushToSerializedBlob(uint64_t const data) {
+		void PushToSerializedBlob(uint64_t const data) {
 			for (std::size_t index = 0; index < sizeof(data); ++index) {
 				serialized_blob.push_back((data >> (index*8)) & 0xFF);
 			}
@@ -89,7 +89,7 @@ namespace serq {
 		/**
 		 * Returns uint64_t value at provided serialized_blob offset.
 		 */
-		inline uint64_t const ReadSerializedBlob(int const offset) const {
+		uint64_t ReadSerializedBlob(int const offset) const {
 			uint64_t data = 0x00;
 			for (int index = sizeof(data)-1; index >= 0; --index) {
 				unsigned char character = serialized_blob[index+offset];
@@ -99,7 +99,7 @@ namespace serq {
 			return *reinterpret_cast<uint64_t*>(&data);
 		}
 
-		inline uint64_t const ReadSerializedBlob(int const offset, std::vector<unsigned char> const& data_vector) const {
+		uint64_t ReadSerializedBlob(int const offset, std::vector<unsigned char> const& data_vector) const {
 			uint64_t data = 0x00;
 			for (int index = sizeof(data)-1; index >= 0; --index) {
 				unsigned char character = data_vector[index+offset];
@@ -109,7 +109,7 @@ namespace serq {
 			return *reinterpret_cast<uint64_t*>(&data);
 		}			
 		
-		inline void WriteToOffset(uint64_t const data, int const offset) {
+		void WriteToOffset(uint64_t const data, int const offset) {
 			for (int index = 0; index < sizeof(data); ++index) {
 				serialized_blob[index+offset] = (data >> (index*8)) & 0xFF;
 			}
@@ -118,7 +118,7 @@ namespace serq {
 		/**
 		 * Returns length of current variable length object (that is not yet popped).
 		 */
-		inline uint64_t const GetVariableLength() const {
+		uint64_t GetVariableLength() const {
 			auto offset_counter = ReadSerializedBlob(0);
 			return ReadSerializedBlob((offset_counter)*8);
 		}
@@ -126,7 +126,7 @@ namespace serq {
 		/**
 		 * Decrements offset counter for variable length variables.
 		 */
-		inline void DecrementVariableLengthCounter() {
+		void DecrementVariableLengthCounter() {
 			auto offset_counter = ReadSerializedBlob(0);
 			--offset_counter;
 			WriteToOffset(offset_counter, 0x00);
@@ -138,38 +138,38 @@ namespace serq {
 		 
 		// Push Section -----------------------------------------------------------
 		
-		inline void push(tag<uint64_t>, uint64_t const data) {
+		void push(tag<uint64_t>, uint64_t const data) {
 			push(data);
 		}
 		
-		inline void push(tag<unsigned int>, unsigned int const data) {
+		void push(tag<unsigned int>, unsigned int const data) {
 			push(data);
 		}
 		
-		inline void push(tag<int>, int const data) {
+		void push(tag<int>, int const data) {
 			push(data);
 		} 
 		 
-		inline void push(tag<unsigned char>, unsigned char const data) {
+		void push(tag<unsigned char>, unsigned char const data) {
 			push(data);
 		}
 		
-		inline void push(tag<float>, float const data) {
+		void push(tag<float>, float const data) {
 			push(data);
 		}
 		
-		inline void push(tag<double>, double const data) {
+		void push(tag<double>, double const data) {
 			push(data);
 		}
 		
-		inline void push(tag<std::string>, std::string const& data) {
+		void push(tag<std::string>, std::string const& data) {
 			push(data);
 		}
 		
 		// STL Containers
 		
 		template<class T1, class T2>
-		inline void push(tag<std::pair<T1, T2>>, std::pair<T1, T2> const& data) {
+		void push(tag<std::pair<T1, T2>>, std::pair<T1, T2> const& data) {
 			push(data);
 		}
 		
@@ -182,35 +182,35 @@ namespace serq {
 		}
 		
 		template<class... Values>
-		inline void push(tag<std::tuple<Values...>>, std::tuple<Values...> const& data) {
+		void push(tag<std::tuple<Values...>>, std::tuple<Values...> const& data) {
 			
 			push_tuple(data, std::make_index_sequence<sizeof...(Values)>());
 		}
 		
 		template<class T>
-		inline void push(tag<std::vector<T>>, std::vector<T> const& data_vector) {
+		void push(tag<std::vector<T>>, std::vector<T> const& data_vector) {
 			push_vector(data_vector);
 		}
 		
 		template<class T1, class T2>
-		inline void push(tag<std::map<T1, T2>>, std::map<T1, T2> const& data_map) {
+		void push(tag<std::map<T1, T2>>, std::map<T1, T2> const& data_map) {
 			push_map(data_map);
 		}
 		
 		template<class T>
-		inline void push(tag<std::queue<T>>, std::queue<T> data_queue) {
+		void push(tag<std::queue<T>>, std::queue<T> data_queue) {
 			push_queue(data_queue);
 		}
 		
 		template<class T>
-		inline void push(tag<std::stack<T>>, std::stack<T> data_stack) {
+		void push(tag<std::stack<T>>, std::stack<T> data_stack) {
 			push_stack(data_stack);
 		}
 		
 		// Pop Section -----------------------------------------------------------
 		
 		template<class T>
-		inline T const pop_generic() {
+		T pop_generic() {
 			uint64_t data = 0x00;
 			for (int index = sizeof(data)-1; index >= 0; --index) {
 				unsigned char character = serialized_blob.back();
@@ -221,59 +221,59 @@ namespace serq {
 			return *reinterpret_cast<T*>(&data);
 		}
 		
-		inline uint64_t const pop(tag<uint64_t>) {
+		uint64_t pop(tag<uint64_t>) {
 			return pop_generic<uint64_t>();
 		}
 		
-		inline unsigned int const pop(tag<unsigned int>) {
+		unsigned int pop(tag<unsigned int>) {
 			return pop_generic<unsigned int>();
 		}
 		
-		inline int const pop(tag<int>) {
+		int pop(tag<int>) {
 			return pop_generic<int>();
 		}
 		
-		inline unsigned char const pop(tag<unsigned char>) {
+		unsigned char pop(tag<unsigned char>) {
 			return pop_generic<unsigned char>();
 		}
 		
-		inline float const pop(tag<float>) {
+		float pop(tag<float>) {
 			return pop_generic<float>();
 		}
 		
-		inline double const pop(tag<double>) {
+		double pop(tag<double>) {
 			return pop_generic<double>();
 		}
 		
 		// STL Containers
 		
 		template<class T1, class T2>
-		inline std::pair<T1, T2> const pop(tag<std::pair<T1, T2>>) {
+		std::pair<T1, T2> pop(tag<std::pair<T1, T2>>) {
 			return pair_pop<T1, T2>();
 		}
 		
 		template<class... Values>
-		inline auto pop(tag<std::tuple<Values...>>) {
+		auto pop(tag<std::tuple<Values...>>) {
 			return std::make_tuple<Values...>(std::move(pop<Values>())...);
 		}
 		
 		template<class T>
-		inline std::vector<T> const pop(tag<std::vector<T>>) {
+		std::vector<T> pop(tag<std::vector<T>>) {
 			return vector_pop<T>();
 		}
 		
 		template<class T1, class T2>
-		inline std::map<T1, T2> const pop(tag<std::map<T1, T2>>) {
+		std::map<T1, T2> pop(tag<std::map<T1, T2>>) {
 			return map_pop<T1, T2>();
 		}
 		
 		template<class T>
-		inline std::queue<T> const pop(tag<std::queue<T>>) {
+		std::queue<T> pop(tag<std::queue<T>>) {
 			return queue_pop<T>();
 		}
 		
 		template<class T>
-		inline std::stack<T> const pop(tag<std::stack<T>>) {
+		std::stack<T> pop(tag<std::stack<T>>) {
 			return stack_pop<T>();
 		}
 		
@@ -297,7 +297,7 @@ namespace serq {
 		 *
 		 * Note: vector is used because it automatically stores the size of the char blob.
 		 */
-		std::vector<unsigned char> const Serialize() {
+		std::vector<unsigned char> Serialize() {
 			serialized_blob.clear();
 			
 			// Create the header, outlined as follows (all entrys are 64 bits)
@@ -347,7 +347,7 @@ namespace serq {
 		 * Stores a binary blob of the serialized data to the provided file name and returns the
 		 * character blob in a vector.
 		 */
-		std::vector<unsigned char> const Serialize(std::string const& file_name) {
+		std::vector<unsigned char> Serialize(std::string const& file_name) {
 			Serialize();
 			
 			// Write char array to file
@@ -512,12 +512,12 @@ namespace serq {
 		 * Depending on the size of the data type, removes from the char blob data to form data type.
 		 */
 		template<class T>
-		T const pop() {
+		T pop() {
 			return pop(tag<T>());
 		}
 		
 		template<class T1, class T2>
-		std::pair<T1, T2> const pair_pop() {
+		std::pair<T1, T2> pair_pop() {
 			T1 first = pop<T1>();
 			T2 second = pop<T2>();
 			return std::pair<T1, T2>(first, second);
@@ -527,7 +527,7 @@ namespace serq {
 		 * Specialization of pop() for STL containers. All types supported by T pop are supported in the container.
 		 */
 		template<class T>
-		std::vector<T> const vector_pop() {
+		std::vector<T> vector_pop() {
 			std::vector<T> data_vector;
 			auto length = GetVariableLength();
 			for (std::size_t index = 0; index < length; ++index) {
@@ -539,7 +539,7 @@ namespace serq {
 		}
 		
 		template<class T1, class T2>
-		std::map<T1, T2> const map_pop() {
+		std::map<T1, T2> map_pop() {
 			std::map<T1, T2> data_map;
 			auto length = GetVariableLength();
 			std::pair<T1, T2> entry;
@@ -553,7 +553,7 @@ namespace serq {
 		}
 		
 		template<class T>
-		std::queue<T> const queue_pop() {
+		std::queue<T> queue_pop() {
 			std::queue<T> data_queue;
 			auto length = GetVariableLength();
 			T entry;
@@ -567,7 +567,7 @@ namespace serq {
 		}
 		
 		template<class T>
-		std::stack<T> const stack_pop() {
+		std::stack<T> stack_pop() {
 			std::stack<T> data_stack;
 			auto length = GetVariableLength();
 			T entry;
@@ -590,7 +590,7 @@ namespace serq {
 	 * Note: Stored in the serial blob as a character array wrapped with a null terminator on both sides.
 	 */
 	template<>
-	std::string const SerializeQueue::pop<std::string>() {
+	std::string SerializeQueue::pop<std::string>() {
 		std::vector<unsigned char> char_array;
 		for (char character = serialized_blob.back(); character != '\0'; character = serialized_blob.back()) {
 			char_array.push_back(character);
