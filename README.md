@@ -1,6 +1,6 @@
 SerializeQueue
 =================
-SerializeQueue (serq) is a C++14 header only library that supports serializing data and STL containers using a queue. Data is pushed onto the queue and is popped in the same order. It is the responsibility of the programmer to ensure that push and pop order is correct, otherwise data will be deserialized incorrectly.
+SerializeQueue (serq) is a C++14 header only library that supports serializing data and STL containers using a queue. Data is pushed onto the queue and is popped in the same order. It is the responsibility of the programmer to ensure that push and pop order is correct, otherwise data will be deserialized incorrectly. Additionally, data integrity is stored using CRC32 and can be optionally checked upon deserialization.
 
 SerializeQueue supports the following data types,
 * uint64_t
@@ -35,9 +35,9 @@ int main() {
 	
 	std::vector<std::vector<int>> game_map = {{1, 0, 0},
 											  {0, 1, 0},
-											  {0, 1, 0}};
+											  {0, 1, 1}};
 											  
-	double game_version = 1.2;
+	double game_version = 1.4;
 
 	// Create a SerializeQueue to push data onto
 	serq::SerializeQueue save_data;
@@ -61,13 +61,21 @@ int main() {
 	serq::SerializeQueue save_data;
 	save_data.Deserialize("data.serq");
 	
+	// Data validation (optional) *must* be done after deserialization but before any other
+	// actions on the class.
+	if (save_data.ValidateData()) {
+		std::cout << "Passed file integrity check" << std::endl;
+	} else {
+		std::cout << "Failed file integrity check" << std::endl;
+	}
+	
 	// Pop data from queue
 	auto high_scores = save_data.pop<std::map<std::string, unsigned int>>();
 	auto game_map = save_data.pop<std::vector<std::vector<int>>>();
 	auto game_version = save_data.pop<double>();
 	
 	// Display saved data
-	std::cout << "High Scores: " << std::endl
+	std::cout << std::endl << "High Scores: " << std::endl
 			  << '\t' << high_scores["Jim"] << std::endl
 			  << '\t' << high_scores["John"] << std::endl
 			  << '\t' << high_scores["Bob"] << std::endl;
