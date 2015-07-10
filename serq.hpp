@@ -31,6 +31,7 @@
 #include <queue>
 #include <stack>
 #include <tuple>
+#include <stdexcept>
 
 namespace serq {
 	/**
@@ -405,6 +406,10 @@ namespace serq {
 		T pop_generic() {
 			uint64_t data = 0x00;
 			for (int index = sizeof(data)-1; index >= 0; --index) {
+				if (serialized_blob.size() <= 0) {
+					throw std::out_of_range("Popping byte beyond end of serialized data.");
+				}
+				
 				unsigned char character = serialized_blob.back();
 				serialized_blob.pop_back();
 				data |= static_cast<uint64_t>(character) << static_cast<uint64_t>(index*8);
