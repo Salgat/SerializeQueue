@@ -136,11 +136,131 @@ namespace serq {
 			WriteToOffset(offset_counter, 0x00);
 		}
 		
-		/**
-		 * Template specialized overloads (tag section)
-		 */
-		 
 		// Push Section -----------------------------------------------------------
+		
+		/**
+		 * Converts data to a character array and pushes it on top of the data stack.
+		 */
+		void push(uint64_t const data) {
+			std::vector<unsigned char> char_blob;
+			for (std::size_t index = 0; index < sizeof(data); ++index) {
+				char_blob.push_back((data >> (index*8)) & 0xFF);
+			}
+			
+			binary_data.push(char_blob);
+		}
+		 
+		void push(unsigned int const data) {
+			// Data is expanded to 64-bit for compatibility with both x64 and x32
+			auto data_64bit = static_cast<uint64_t>(data);
+			push(data_64bit);
+		}
+		
+		void push(int const data) {
+			auto data_64bit = static_cast<int64_t>(data);
+			push(*reinterpret_cast<uint64_t*>(&data_64bit));
+		}
+		
+		void push(unsigned char const data) {
+			std::vector<unsigned char> char_blob = {data};
+			binary_data.push(char_blob);
+		}
+
+		void push(float const data) {
+			float data_copy = data;
+			uint64_t data_64bit = 0x00;
+			data_64bit |= *reinterpret_cast<uint64_t*>(&data_copy);
+			push(data_64bit);
+		}
+		
+		void push(double const data) {
+			double data_copy = data;
+			if (sizeof(double) == 8) {
+				push(*reinterpret_cast<uint64_t*>(&data_copy));
+			} else {
+				uint64_t data_64bit = 0x00;
+				data_64bit |= *reinterpret_cast<uint64_t*>(&data_copy);
+				push(data_64bit);
+			}	
+		}
+		
+		void push(char const* data) {
+			std::vector<unsigned char> char_blob;
+			char_blob.push_back('\0');
+			for (std::size_t index = 0; data[index] != '\0'; ++index) {
+				char_blob.push_back(data[index]);
+			}
+		
+			binary_data.push(char_blob);
+		}
+		
+		void push(std::string const& data) {
+			char const* char_array = data.c_str();
+			push(char_array);
+		}
+		
+		void push(bool const data) {
+			// Todo: Change this to be stored in char (8 bit) when support is added for it.
+			uint64_t data_64bit = data ? 0x01 : 0x00;
+			push(data_64bit);
+		}
+		
+		template<class T1, class T2>
+		void push(std::pair<T1, T2> const& data) {
+			push<T1>(data.first);
+			push<T2>(data.second);
+		}
+		
+		template<class T>
+		void push_vector(std::vector<T> const& data_vector) {
+			for (auto const& data : data_vector) {
+				push(data);
+			}
+			
+			variable_lengths.push_back(data_vector.size());
+		}
+		
+		template<class T1, class T2>
+		void push_map(std::map<T1, T2> const& data_map) {
+			std::size_t counter = 0;
+			for (auto& entry : data_map) {
+				push<T1, T2>(entry);
+				++counter;
+			}
+			
+			variable_lengths.push_back(counter);
+		}
+		
+		template<class T>
+		void push_queue(std::queue<T> data_queue) {
+			std::size_t counter = 0;
+			while(!data_queue.empty()) {
+				push<T>(data_queue.front());
+				data_queue.pop();
+				++counter;
+			}
+			
+			variable_lengths.push_back(counter);
+		}
+		
+		template<class T>
+		void push_stack(std::stack<T> data_stack) {
+			// First reverse the stack (due to it being stored in reverse order)
+			std::stack<T> stack_reversed;
+			while(!data_stack.empty()) {
+				stack_reversed.push(data_stack.top());
+				data_stack.pop();
+			}
+		
+			std::size_t counter = 0;
+			while(!stack_reversed.empty()) {
+				push<T>(stack_reversed.top());
+				stack_reversed.pop();
+				++counter;
+			}
+			
+			variable_lengths.push_back(counter);
+		}
 		
 		void push(tag<uint64_t>, uint64_t const data) {
 			push(data);
@@ -217,6 +337,69 @@ namespace serq {
 		}
 		
 		// Pop Section -----------------------------------------------------------
+		/**
+		 * Specialization of pop() for STL containers. All types supported by T pop are supported in the container.
+		 */
+		template<class T1, class T2>
+		std::pair<T1, T2> pair_pop() {
+			T1 first = pop<T1>();
+			T2 second = pop<T2>();
+			return std::pair<T1, T2>(first, second);
+		}
+		 
+		template<class T>
+		std::vector<T> vector_pop() {
+			std::vector<T> data_vector;
+			auto length = GetVariableLength();
+			for (std::size_t index = 0; index < length; ++index) {
+				data_vector.push_back(pop<T>());
+			}
+			
+			DecrementVariableLengthCounter();
+			return data_vector;
+		}
+		
+		template<class T1, class T2>
+		std::map<T1, T2> map_pop() {
+			std::map<T1, T2> data_map;
+			auto length = GetVariableLength();
+			std::pair<T1, T2> entry;
+			for (std::size_t index = 0; index < length; ++index) {
+				entry = pop<std::pair<T1, T2>>();
+				data_map.insert(entry);
+			}
+			
+			DecrementVariableLengthCounter();
+			return data_map;
+		}
+		
+		template<class T>
+		std::queue<T> queue_pop() {
+			std::queue<T> data_queue;
+			auto length = GetVariableLength();
+			T entry;
+			for (std::size_t index = 0; index < length; ++index) {
+				entry = pop<T>();
+				data_queue.push(entry);
+			}
+			
+			DecrementVariableLengthCounter();
+			return data_queue;
+		}
+		
+		template<class T>
+		std::stack<T> stack_pop() {
+			std::stack<T> data_stack;
+			auto length = GetVariableLength();
+			T entry;
+			for (std::size_t index = 0; index < length; ++index) {
+				entry = pop<T>();
+				data_stack.push(entry);
+			}
+			
+			DecrementVariableLengthCounter();
+			return data_stack;
+		}
 		
 		template<class T>
 		T pop_generic() {
@@ -230,6 +413,9 @@ namespace serq {
 			return *reinterpret_cast<T*>(&data);
 		}
 		
+		/**
+		 * 
+		 */
 		uint64_t pop(tag<uint64_t>) {
 			return pop_generic<uint64_t>();
 		}
@@ -508,7 +694,6 @@ namespace serq {
 		
 		/**
 		 * Generic push onto queue (calls one of the other specific implementations).
-		 * Useful because it enforces more explicit type storage.
 		 *
 		 * Note: Tag-dispatching is used to allow for STL template specializations
 		 */
@@ -518,203 +703,11 @@ namespace serq {
 		}
 		
 		/**
-		 * Converts data to a character array and pushes it on top of the data stack.
-		 */
-		void push(uint64_t const data) {
-			std::vector<unsigned char> char_blob;
-			for (std::size_t index = 0; index < sizeof(data); ++index) {
-				char_blob.push_back((data >> (index*8)) & 0xFF);
-			}
-			
-			binary_data.push(char_blob);
-		}
-		 
-		void push(unsigned int const data) {
-			// Data is expanded to 64-bit for compatibility with both x64 and x32
-			auto data_64bit = static_cast<uint64_t>(data);
-			push(data_64bit);
-		}
-		
-		void push(int const data) {
-			auto data_64bit = static_cast<int64_t>(data);
-			push(*reinterpret_cast<uint64_t*>(&data_64bit));
-		}
-		
-		void push(unsigned char const data) {
-			std::vector<unsigned char> char_blob = {data};
-			binary_data.push(char_blob);
-		}
-
-		void push(float const data) {
-			float data_copy = data;
-			uint64_t data_64bit = 0x00;
-			data_64bit |= *reinterpret_cast<uint64_t*>(&data_copy);
-			push(data_64bit);
-		}
-		
-		void push(double const data) {
-			double data_copy = data;
-			if (sizeof(double) == 8) {
-				push(*reinterpret_cast<uint64_t*>(&data_copy));
-			} else {
-				uint64_t data_64bit = 0x00;
-				data_64bit |= *reinterpret_cast<uint64_t*>(&data_copy);
-				push(data_64bit);
-			}	
-		}
-		
-		void push(char const* data) {
-			std::vector<unsigned char> char_blob;
-			char_blob.push_back('\0');
-			for (std::size_t index = 0; data[index] != '\0'; ++index) {
-				char_blob.push_back(data[index]);
-			}
-		
-			binary_data.push(char_blob);
-		}
-		
-		void push(std::string const& data) {
-			char const* char_array = data.c_str();
-			push(char_array);
-		}
-		
-		void push(bool const data) {
-			// Todo: Change this to be stored in char (8 bit) when support is added for it.
-			uint64_t data_64bit = data ? 0x01 : 0x00;
-			push(data_64bit);
-		}
-		
-		/**
-		 * Push specializations for STL containers.
-		 */
-		//-----------------------------------------------------------------------------
-		template<class T1, class T2>
-		void push(std::pair<T1, T2> const& data) {
-			push<T1>(data.first);
-			push<T2>(data.second);
-		}
-		
-		template<class T>
-		void push_vector(std::vector<T> const& data_vector) {
-			for (auto const& data : data_vector) {
-				push(data);
-			}
-			
-			variable_lengths.push_back(data_vector.size());
-		}
-		
-		template<class T1, class T2>
-		void push_map(std::map<T1, T2> const& data_map) {
-			std::size_t counter = 0;
-			for (auto& entry : data_map) {
-				push<T1, T2>(entry);
-				++counter;
-			}
-			
-			variable_lengths.push_back(counter);
-		}
-		
-		template<class T>
-		void push_queue(std::queue<T> data_queue) {
-			std::size_t counter = 0;
-			while(!data_queue.empty()) {
-				push<T>(data_queue.front());
-				data_queue.pop();
-				++counter;
-			}
-			
-			variable_lengths.push_back(counter);
-		}
-		
-		template<class T>
-		void push_stack(std::stack<T> data_stack) {
-			// First reverse the stack (due to it being stored in reverse order)
-			std::stack<T> stack_reversed;
-			while(!data_stack.empty()) {
-				stack_reversed.push(data_stack.top());
-				data_stack.pop();
-			}
-		
-			std::size_t counter = 0;
-			while(!stack_reversed.empty()) {
-				push<T>(stack_reversed.top());
-				stack_reversed.pop();
-				++counter;
-			}
-			
-			variable_lengths.push_back(counter);
-		}
-		
-		/**
 		 * Depending on the size of the data type, removes from the char blob data to form data type.
 		 */
 		template<class T>
 		T pop() {
 			return pop(tag<T>());
-		}
-		
-		template<class T1, class T2>
-		std::pair<T1, T2> pair_pop() {
-			T1 first = pop<T1>();
-			T2 second = pop<T2>();
-			return std::pair<T1, T2>(first, second);
-		}
-		
-		/**
-		 * Specialization of pop() for STL containers. All types supported by T pop are supported in the container.
-		 */
-		template<class T>
-		std::vector<T> vector_pop() {
-			std::vector<T> data_vector;
-			auto length = GetVariableLength();
-			for (std::size_t index = 0; index < length; ++index) {
-				data_vector.push_back(pop<T>());
-			}
-			
-			DecrementVariableLengthCounter();
-			return data_vector;
-		}
-		
-		template<class T1, class T2>
-		std::map<T1, T2> map_pop() {
-			std::map<T1, T2> data_map;
-			auto length = GetVariableLength();
-			std::pair<T1, T2> entry;
-			for (std::size_t index = 0; index < length; ++index) {
-				entry = pop<std::pair<T1, T2>>();
-				data_map.insert(entry);
-			}
-			
-			DecrementVariableLengthCounter();
-			return data_map;
-		}
-		
-		template<class T>
-		std::queue<T> queue_pop() {
-			std::queue<T> data_queue;
-			auto length = GetVariableLength();
-			T entry;
-			for (std::size_t index = 0; index < length; ++index) {
-				entry = pop<T>();
-				data_queue.push(entry);
-			}
-			
-			DecrementVariableLengthCounter();
-			return data_queue;
-		}
-		
-		template<class T>
-		std::stack<T> stack_pop() {
-			std::stack<T> data_stack;
-			auto length = GetVariableLength();
-			T entry;
-			for (std::size_t index = 0; index < length; ++index) {
-				entry = pop<T>();
-				data_stack.push(entry);
-			}
-			
-			DecrementVariableLengthCounter();
-			return data_stack;
 		}
 	};
 
