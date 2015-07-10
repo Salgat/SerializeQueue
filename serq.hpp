@@ -162,6 +162,11 @@ namespace serq {
 			push(*reinterpret_cast<uint64_t*>(&data_64bit));
 		}
 		
+		void push(char data) {
+			unsigned char converted_data = *reinterpret_cast<unsigned char*>(&data);
+			push(converted_data);
+		}
+		
 		void push(unsigned char const data) {
 			std::vector<unsigned char> char_blob = {data};
 			binary_data.push(char_blob);
@@ -274,6 +279,10 @@ namespace serq {
 		void push(tag<int>, int const data) {
 			push(data);
 		} 
+		
+		void push(tag<char>, char const data) {
+			push(data);
+		}
 		 
 		void push(tag<unsigned char>, unsigned char const data) {
 			push(data);
@@ -409,7 +418,7 @@ namespace serq {
 				if (serialized_blob.size() <= 0) {
 					throw std::out_of_range("Popping byte beyond end of serialized data.");
 				}
-				
+			
 				unsigned char character = serialized_blob.back();
 				serialized_blob.pop_back();
 				data |= static_cast<uint64_t>(character) << static_cast<uint64_t>(index*8);
@@ -433,8 +442,18 @@ namespace serq {
 			return pop_generic<int>();
 		}
 		
+		char pop(tag<char>) {
+			unsigned char character = serialized_blob.back();
+			serialized_blob.pop_back();
+			
+			return *reinterpret_cast<char*>(&character);
+		}
+		
 		unsigned char pop(tag<unsigned char>) {
-			return pop_generic<unsigned char>();
+			unsigned char character = serialized_blob.back();
+			serialized_blob.pop_back();
+			
+			return character;
 		}
 		
 		float pop(tag<float>) {
