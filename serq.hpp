@@ -443,6 +443,10 @@ namespace serq {
 		}
 		
 		char pop(tag<char>) {
+			if (serialized_blob.size() <= 0) {
+				throw std::out_of_range("Popping byte beyond end of serialized data.");
+			}
+			
 			unsigned char character = serialized_blob.back();
 			serialized_blob.pop_back();
 			
@@ -450,6 +454,10 @@ namespace serq {
 		}
 		
 		unsigned char pop(tag<unsigned char>) {
+			if (serialized_blob.size() <= 0) {
+				throw std::out_of_range("Popping byte beyond end of serialized data.");
+			}
+			
 			unsigned char character = serialized_blob.back();
 			serialized_blob.pop_back();
 			
@@ -747,9 +755,17 @@ namespace serq {
 	std::string SerializeQueue::pop<std::string>() {
 		std::vector<unsigned char> char_array;
 		for (char character = serialized_blob.back(); character != '\0'; character = serialized_blob.back()) {
+			if (serialized_blob.size() <= 0) {
+				throw std::out_of_range("Popping byte beyond end of serialized data.");
+			}
+			
 			char_array.push_back(character);
 			serialized_blob.pop_back();
 		}
+		if (serialized_blob.size() <= 0) {
+			throw std::out_of_range("Popping byte beyond end of serialized data.");
+		}
+				
 		serialized_blob.pop_back();
 	
 		// Create a c string that is the reverse
