@@ -3,6 +3,7 @@ SerializeQueue
 SerializeQueue (serq) is a C++14 header only library that supports serializing data and STL containers using a queue. Data is pushed onto the queue and is popped in the same order. It is the responsibility of the programmer to ensure that push and pop order is correct, otherwise data will be deserialized incorrectly. Additionally, data integrity is stored using CRC32 and can be optionally checked upon deserialization.
 
 SerializeQueue supports the following data types,
+* bool
 * uint64_t
 * int
 * unsigned int
