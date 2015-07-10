@@ -4,11 +4,10 @@ SerializeQueue (serq) is a C++14 header only library that supports serializing d
 
 SerializeQueue supports the following data types,
 * bool
+* char, unsigned char
 * uint64_t
-* int
-* unsigned int
-* double
-* float
+* int, unsigned int
+* float, double
 * std::string
 * STL Containers (which can hold any of the supported types, including other STL containers)
   * std::pair<T1, T2>
@@ -18,7 +17,11 @@ SerializeQueue supports the following data types,
   * std::queue<T>
   * std::stack<T>
 
-There are a few caveats to using this library. SerializeQueue is cross compatible between 32 and 64 bit (a serialized value will work on either architecture); however, values larger than 2^32-1 used on a 32-bit platform should stick to uint64_t types. Additionally, data is serialized assuming little-endianness. Finally, std::tuple<T> has limited support (only basic data types). Hopefully once I get a better handle on template metaprogramming, I can fix this.
+There are a few caveats to using this library. 
+* SerializeQueue is cross compatible between 32 and 64 bit (a serialized value will work on either architecture); however, values larger than 2^32-1 used on a 32-bit platform should stick to uint64_t types. 
+* Data is serialized assuming little-endianness. 
+* Due to overload ambiguities, explicit support for uint8_t, uint16_t, and uint32_t is not supported. These values should be cast to unsigned int before storing, and cast back after popping. The issue comes down to the compiler treating types like uint32_t and unsigned int as identical (probably due to an internal typedef), which results in two overloads having the same type (which is invalid). The same applies for int8_t, etc, which should be cast to and from int.
+* std::tuple<T> has limited support (only basic data types). Hopefully once I get a better handle on template metaprogramming, I can fix this.
 
 Example
 -----------------
@@ -114,5 +117,4 @@ Todo
 * Expand std::tuple<T...> support
 * Setup tests (TDD)
 * Optimize (move semantics, etc)
-* Add exception support
 * Perhaps create a way for people to overload their own object types easily?
