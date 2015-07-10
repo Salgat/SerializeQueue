@@ -60,7 +60,9 @@ namespace serq {
 		std::vector<unsigned char> original_serialized_blob;
 		std::vector<unsigned char> serialized_blob;
 		
-		uint32_t checksum;
+		uint32_t checksum; // Holds the checksum of the last deserialized character blob
+		//uint32_t offset;  // Holds the byte offset of the last deserialized character blob
+		uint32_t const kSerializeOffset = 0; // Holds the byte offset used for serializing
 		
 		// Helper methods
 		/**
@@ -168,6 +170,11 @@ namespace serq {
 			push(data);
 		}
 		
+		void push(tag<bool>, bool const data) {
+			uint64_t data_64bit = data ? 0x01 : 0x00;
+			push(data_64bit);
+		}
+		
 		// STL Containers
 		
 		template<class T1, class T2>
@@ -245,6 +252,11 @@ namespace serq {
 		
 		double pop(tag<double>) {
 			return pop_generic<double>();
+		}
+		
+		bool pop(tag<bool>) {
+			uint64_t result = pop_generic<uint64_t>();
+			return (result > 0);
 		}
 		
 		// STL Containers
@@ -564,6 +576,12 @@ namespace serq {
 		void push(std::string const& data) {
 			char const* char_array = data.c_str();
 			push(char_array);
+		}
+		
+		void push(bool const data) {
+			// Todo: Change this to be stored in char (8 bit) when support is added for it.
+			uint64_t data_64bit = data ? 0x01 : 0x00;
+			push(data_64bit);
 		}
 		
 		/**
