@@ -33,6 +33,8 @@
 #include <tuple>
 #include <stdexcept>
 
+#include <iostream>
+
 namespace serq {
 	/**
 	 * Returns a reversed tuple. (thanks to http://stackoverflow.com/questions/25119048/reversing-a-c-tuple)
@@ -64,6 +66,7 @@ namespace serq {
 		uint32_t checksum; // Holds the checksum of the last deserialized character blob
 		//uint32_t offset;  // Holds the byte offset of the last deserialized character blob
 		uint32_t const kSerializeOffset = 0; // Holds the byte offset used for serializing
+		uint64_t serialized_header_length; // Holds length of data header (variable_lengths) for serialized data
 		
 		// Helper methods
 		/**
@@ -415,7 +418,7 @@ namespace serq {
 		T pop_generic() {
 			uint64_t data = 0x00;
 			for (int index = sizeof(data)-1; index >= 0; --index) {
-				if (serialized_blob.size() <= 0) {
+				if (static_cast<int>(serialized_blob.size()) - static_cast<int>(serialized_header_length) <= 0) {
 					throw std::out_of_range("Popping byte beyond end of serialized data.");
 				}
 			
@@ -443,7 +446,7 @@ namespace serq {
 		}
 		
 		char pop(tag<char>) {
-			if (serialized_blob.size() <= 0) {
+			if (static_cast<int>(serialized_blob.size()) - static_cast<int>(serialized_header_length) <= 0) {
 				throw std::out_of_range("Popping byte beyond end of serialized data.");
 			}
 			
@@ -454,7 +457,7 @@ namespace serq {
 		}
 		
 		unsigned char pop(tag<unsigned char>) {
-			if (serialized_blob.size() <= 0) {
+			if (static_cast<int>(serialized_blob.size()) - static_cast<int>(serialized_header_length) <= 0) {
 				throw std::out_of_range("Popping byte beyond end of serialized data.");
 			}
 			
@@ -711,6 +714,17 @@ namespace serq {
 			
 			serialized_blob = original_serialized_blob;
 			original_serialized_blob.clear();
+			
+			serialized_header_length = static_cast<uint64_t>(serialized_blob[0]);
+			serialized_header_length += static_cast<uint64_t>(serialized_blob[1]) << 8;
+			serialized_header_length += static_cast<uint64_t>(serialized_blob[2]) << 16;
+			serialized_header_length += static_cast<uint64_t>(serialized_blob[3]) << 24;
+			serialized_header_length += static_cast<uint64_t>(serialized_blob[4]) << 32;
+			serialized_header_length += static_cast<uint64_t>(serialized_blob[5]) << 40;
+			serialized_header_length += static_cast<uint64_t>(serialized_blob[6]) << 48;
+			serialized_header_length += static_cast<uint64_t>(serialized_blob[7]) << 56;
+			serialized_header_length += 1; // An extra uint64_t for the storing of the data header length
+			serialized_header_length *= 8;
 		}
 		
 		/**
@@ -755,14 +769,14 @@ namespace serq {
 	std::string SerializeQueue::pop<std::string>() {
 		std::vector<unsigned char> char_array;
 		for (char character = serialized_blob.back(); character != '\0'; character = serialized_blob.back()) {
-			if (serialized_blob.size() <= 0) {
+			if (static_cast<int>(serialized_blob.size()) - static_cast<int>(serialized_header_length) <= 0) {
 				throw std::out_of_range("Popping byte beyond end of serialized data.");
 			}
 			
 			char_array.push_back(character);
 			serialized_blob.pop_back();
 		}
-		if (serialized_blob.size() <= 0) {
+		if (static_cast<int>(serialized_blob.size()) - static_cast<int>(serialized_header_length) <= 0) {
 			throw std::out_of_range("Popping byte beyond end of serialized data.");
 		}
 				
