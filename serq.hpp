@@ -675,6 +675,8 @@ namespace serq {
 			
 			// Write char array to file
 			std::ofstream output(file_name, std::ios::out | std::ios::binary);
+			if (!output)
+				throw std::ofstream::failure("Failed to create output file.");
 			
 			// Initialize Header
 			// Address 0x00-0x03 = CRC32 Checksum
@@ -698,6 +700,8 @@ namespace serq {
 			Clear();
 		
 			std::ifstream input(file_name, std::ios::in | std::ios::binary);
+			if (!input)
+				throw std::ifstream::failure("Failed to open file.");
 			
 			// Read CRC32 checksum
 			checksum = 0;
