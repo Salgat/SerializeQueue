@@ -29,6 +29,7 @@
 #include <iomanip>
 #include <utility>
 #include <map>
+#include <unordered_map>
 #include <queue>
 #include <stack>
 #include <tuple>
@@ -249,6 +250,17 @@ namespace serq {
 			
 			variable_lengths.push_back(counter);
 		}
+				
+		template<class T1, class T2>
+		void push_unordered_map(std::unordered_map<T1, T2> const& data_map) {
+			std::size_t counter = 0;
+			for (auto& entry : data_map) {
+				push<T1, T2>(entry);
+				++counter;
+			}
+			
+			variable_lengths.push_back(counter);
+		}
 		
 		template<class T>
 		void push_queue(std::queue<T> data_queue) {
@@ -354,6 +366,11 @@ namespace serq {
 			push_map(data_map);
 		}
 		
+		template<class T1, class T2>
+		void push(tag<std::unordered_map<T1, T2>>, std::unordered_map<T1, T2> const& data_map) {
+			push_unordered_map(data_map);
+		}
+		
 		template<class T>
 		void push(tag<std::queue<T>>, std::queue<T> data_queue) {
 			push_queue(data_queue);
@@ -402,6 +419,20 @@ namespace serq {
 		template<class T1, class T2>
 		std::map<T1, T2> map_pop() {
 			std::map<T1, T2> data_map;
+			auto length = GetVariableLength();
+			std::pair<T1, T2> entry;
+			for (std::size_t index = 0; index < length; ++index) {
+				entry = pop<std::pair<T1, T2>>();
+				data_map.insert(entry);
+			}
+			
+			DecrementVariableLengthCounter();
+			return data_map;
+		}
+		
+		template<class T1, class T2>
+		std::unordered_map<T1, T2> unordered_map_pop() {
+			std::unordered_map<T1, T2> data_map;
 			auto length = GetVariableLength();
 			std::pair<T1, T2> entry;
 			for (std::size_t index = 0; index < length; ++index) {
@@ -532,6 +563,11 @@ namespace serq {
 		template<class T1, class T2>
 		std::map<T1, T2> pop(tag<std::map<T1, T2>>) {
 			return map_pop<T1, T2>();
+		}
+		
+		template<class T1, class T2>
+		std::unordered_map<T1, T2> pop(tag<std::unordered_map<T1, T2>>) {
+			return unordered_map_pop<T1, T2>();
 		}
 		
 		template<class T>
