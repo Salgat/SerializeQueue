@@ -18,6 +18,7 @@
 #ifndef SERIALIZE_QUEUE_H
 #define SERIALIZE_QUEUE_H
 
+#include <array>
 #include <vector>
 #include <stack>
 #include <memory>
@@ -220,6 +221,15 @@ namespace serq {
 			push<T2>(data.second);
 		}
 		
+		template<class T1, std::size_t T2>
+		void push_array(std::array<T1, T2> const& data_array) {
+			for (auto const& data : data_array) {
+				push(data);
+			}
+			
+			variable_lengths.push_back(data_array.size());
+		}
+		
 		template<class T>
 		void push_vector(std::vector<T> const& data_vector) {
 			for (auto const& data : data_vector) {
@@ -329,6 +339,11 @@ namespace serq {
 			push_tuple(data, std::make_index_sequence<sizeof...(Values)>());
 		}
 		
+		template<class T1, std::size_t T2>
+		void push(tag<std::array<T1, T2>>, std::array<T1, T2> const& data_array) {
+			push_array(data_array);
+		}
+		
 		template<class T>
 		void push(tag<std::vector<T>>, std::vector<T> const& data_vector) {
 			push_vector(data_vector);
@@ -359,6 +374,18 @@ namespace serq {
 			T2 second = pop<T2>();
 			return std::pair<T1, T2>(first, second);
 		}
+		 
+		template<class T1, std::size_t T2>
+		std::array<T1, T2> array_pop() {
+			std::array<T1, T2> data_array;
+			auto length = GetVariableLength();
+			for (std::size_t index = 0; index < length; ++index) {
+				data_array[index] = pop<T1>();
+			}
+			
+			DecrementVariableLengthCounter();
+			return data_array;
+		} 
 		 
 		template<class T>
 		std::vector<T> vector_pop() {
@@ -490,6 +517,11 @@ namespace serq {
 		template<class... Values>
 		auto pop(tag<std::tuple<Values...>>) {
 			return std::make_tuple<Values...>(std::move(pop<Values>())...);
+		}
+		
+		template<class T1, std::size_t T2>
+		std::array<T1, T2> pop(tag<std::array<T1, T2>>) {
+			return array_pop<T1, T2>();
 		}
 		
 		template<class T>
