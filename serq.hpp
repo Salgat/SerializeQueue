@@ -587,7 +587,8 @@ namespace serq {
 		 *         http://www.barrgroup.com/Embedded-Systems/How-To/CRC-Calculation-C-Code
 		 */
 		// CRC32 table for generator polynomial 0x04C11DB7
-		uint32_t crc_table[256] = {
+		// static const since we only need one immutable copy across all instances
+		static const constexpr uint32_t crc_table[256] = {
 		0x00000000, 0x77073096, 0xEE0E612C, 0x990951BA,
 	    0x076DC419, 0x706AF48F, 0xE963A535, 0x9E6495A3,
 	    0x0EDB8832, 0x79DCB8A4, 0xE0D5E91E, 0x97D2D988,
@@ -864,6 +865,8 @@ namespace serq {
 		
 		return std::string(c_string);
 	}
+	
+	constexpr const uint32_t SerializeQueue::crc_table[256];
 }	
 
 /**
